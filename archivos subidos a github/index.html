@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mapa de Mapas | Tu ciudad curada</title>
+    <meta name="description" content="Colecciones temáticas curadas de Buenos Aires y Argentina: bodegones, cafés, sky bars, tapas y más.">
+
+    <!-- Google Fonts: Big Shoulders Display + Space Grotesk + Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <!-- Leaflet & MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+    <!-- Application Modular Styles -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/panel-right.css">
+
+    <style>
+      /* ── Category color helpers (usados por JS inline) ── */
+      .cat-gastronomia { background-color: var(--color-gastronomia) !important; }
+      .cat-cafeterias   { background-color: var(--color-cafeterias)  !important; }
+      .cat-bares        { background-color: var(--color-bares)       !important; }
+      .cat-turismo      { background-color: var(--color-turismo)     !important; }
+      .cat-compras      { background-color: var(--color-compras)     !important; }
+      .cat-cultura      { background-color: var(--color-cultura)     !important; }
+
+      /* Zoom control repositioned below botonera */
+      .leaflet-top.leaflet-right { top: 230px !important; }
+
+      /* ── Brand Logo ── */
+      .brand-title {
+        font-family: var(--font-logo) !important;
+        font-size: 2rem !important;
+        font-weight: 900 !important;
+        letter-spacing: -0.04em !important;
+        text-transform: uppercase;
+        line-height: 1;
+      }
+      .brand-title span { color: var(--primary); }
+
+      /* ── Place Card Redesign: foto arriba, franja de color abajo ── */
+      .item-card.place-item {
+        flex-direction: column !important;
+        min-height: auto !important;
+      }
+      .item-card.place-item .card-img-wrap {
+        width: 100% !important;
+        height: 120px !important;
+        flex-shrink: 0;
+      }
+      .item-card.place-item .card-info {
+        padding: 0.65rem 0.85rem !important;
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
+        /* background set dynamically by category */
+      }
+      .item-card.place-item .card-title { color: white !important; font-size: 0.92rem; }
+      .item-card.place-item .card-curator { color: rgba(255,255,255,0.8) !important; }
+      .item-card.place-item .card-desc { color: rgba(255,255,255,0.75) !important; }
+      .item-card.place-item .tag-badge {
+        background: rgba(255,255,255,0.2) !important;
+        color: white !important;
+      }
+
+      /* ── Chip buttons colored by category ── */
+      .chip-btn[data-cat="Gastronomía"].active  { background: var(--color-gastronomia); border-color: var(--color-gastronomia); }
+      .chip-btn[data-cat="Cafeterías"].active   { background: var(--color-cafeterias);  border-color: var(--color-cafeterias); }
+      .chip-btn[data-cat="Bares"].active        { background: var(--color-bares);       border-color: var(--color-bares); }
+      .chip-btn[data-cat="Turismo"].active      { background: var(--color-turismo);     border-color: var(--color-turismo); }
+      .chip-btn[data-cat*="Compras"].active     { background: var(--color-compras);     border-color: var(--color-compras); }
+      .chip-btn[data-cat="Cultura"].active      { background: var(--color-cultura);     border-color: var(--color-cultura); }
+
+      /* ── Tag Cloud (nube navegable) ── */
+      .tag-cloud-section {
+        margin: 0.75rem 0 1rem;
+      }
+      .tag-cloud-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--slate-400);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        margin-bottom: 0.5rem;
+      }
+      .tag-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      .tag-pill {
+        background: var(--slate-100);
+        border: 1px solid var(--slate-200);
+        color: var(--slate-600);
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.6rem;
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        transition: var(--transition-fast);
+        font-family: var(--font-body);
+      }
+      .tag-pill:hover {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+      }
+
+      /* ── Geo slider ── */
+      .geo-slider-wrap {
+        margin: 1rem 0 0.5rem;
+      }
+      .geo-slider-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--navy-900);
+        margin-bottom: 0.4rem;
+      }
+      .geo-slider-label span {
+        color: var(--primary);
+        font-size: 0.9rem;
+      }
+      input[type="range"].geo-slider {
+        width: 100%;
+        accent-color: var(--primary);
+        cursor: pointer;
+      }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- Interactive Map Viewport -->
+        <div id="map-viewport"></div>
+
+        <!-- Floating Left Sidebar UI -->
+        <aside id="sidebar-container">
+            <div class="mobile-handlebar"></div>
+
+            <header class="sidebar-header">
+                <!-- Brand Title Home Link -->
+                <h1 class="brand-title">Mapa de <span>Mapas</span></h1>
+                <p class="brand-subtitle">Colecciones temáticas curadas por la comunidad</p>
+
+                <!-- Live Search Input -->
+                <div class="search-wrapper">
+                    <input type="text" id="search-input" class="search-input" placeholder="Buscar pizza, terraza, bodegón..." autocomplete="off">
+                    <button id="search-btn" class="search-btn" aria-label="Buscar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </button>
+                </div>
+
+                <!-- Horizontal Categories Chips -->
+                <div class="categories-wrapper">
+                    <div class="categories-scroll" id="category-scroll"></div>
+                </div>
+            </header>
+
+            <main class="sidebar-body" id="sidebar-body">
+                <!-- Content View injected dynamically by UI.js -->
+            </main>
+
+            <!-- KML Importer moved to "Crear Mapa" panel — removed from here -->
+            <input type="file" id="kml-file-input" accept=".kml,.geojson,.json" style="display: none;">
+        </aside>
+
+        <!-- ─── Floating Right Action Panel ─── -->
+        <div id="right-panel">
+            <div id="right-expanded-panel"></div>
+
+            <!-- Reordered: Mis Mapas → Cerca tuyo → Crear Mapa -->
+            <div class="right-btn-stack">
+                <button id="btn-my-maps" class="right-action-btn" aria-label="Mis Mapas" title="Mis Mapas">
+                    <span class="btn-icon">🗺️</span>
+                    <span class="btn-label">Mis Mapas</span>
+                </button>
+                <button id="btn-geo" class="right-action-btn" aria-label="Cerca tuyo" title="Cerca tuyo">
+                    <span class="btn-icon">📍</span>
+                    <span class="btn-label">Cerca tuyo</span>
+                </button>
+                <button id="btn-create-map" class="right-action-btn create-btn" aria-label="Crear Mapa" title="Crear Mapa">
+                    <span class="btn-icon">＋</span>
+                    <span class="btn-label">Crear</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet & MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <!-- Application Scripts — order matters -->
+    <script src="data/maps-data.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/geojson-parser.js"></script>
+    <script src="js/identity.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/right-panel.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
