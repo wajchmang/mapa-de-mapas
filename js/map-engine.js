@@ -144,7 +144,18 @@ const MapEngine = {
             setTimeout(() => {
                 this.map.panBy([-CONFIG.SIDEBAR_WIDTH_OFFSET, 0], { animate: true });
             }, 150);
+        } else if (typeof MobileSheet !== 'undefined') {
+            // Celular: centrar el lugar en la parte del mapa que queda arriba del panel
+            setTimeout(() => {
+                this.map.panBy([0, MobileSheet.heightFor('half') / 2], { animate: true });
+            }, 150);
         }
+    },
+
+    /** Celular: espacio que tapa el panel cuando se muestra un mapa (modo bajo) */
+    mobileBottomPadding() {
+        if (typeof MobileSheet !== 'undefined') return MobileSheet.heightFor('peek') + 24;
+        return 250;
     },
 
     fitBoundsWithOffset(bounds) {
@@ -152,7 +163,7 @@ const MapEngine = {
         const isDesktop = window.innerWidth > 768;
         this.map.fitBounds(bounds, {
             paddingTopLeft: [isDesktop ? 440 : 20, 40],
-            paddingBottomRight: [isDesktop ? 120 : 20, isDesktop ? 40 : 250],
+            paddingBottomRight: [isDesktop ? 120 : 20, isDesktop ? 40 : this.mobileBottomPadding()],
             maxZoom: 15,
             animate: true
         });

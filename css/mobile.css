@@ -1,0 +1,154 @@
+/* ================================================================
+   MOBILE — mobile.css
+   Versión celular (≤ 768px). Se carga última para mandar sobre el resto.
+   El panel inferior cambia de altura con js/mobile-sheet.js, que además
+   publica la altura actual en la variable --sheet-h.
+================================================================ */
+
+/* El sello del logo no existe en desktop */
+.brand-stamp { display: none; }
+
+@media (max-width: 768px) {
+
+  /* ── Pantalla completa real en celulares (evita la barra del navegador) ── */
+  body,
+  #app-container {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* ── Sello del logo: chico, flotando arriba a la izquierda ── */
+  .brand-stamp {
+    display: inline-flex;
+    align-items: center;
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    left: 12px;
+    z-index: 15;
+    padding: 0.45rem 0.8rem 0.4rem;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--radius-full);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    font-family: var(--font-logo);
+    font-size: 1.1rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    line-height: 1;
+    color: var(--navy-900);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .brand-stamp span { color: var(--primary); margin-left: 0.25em; }
+
+  /* El logo grande y la bajada se esconden dentro del panel */
+  .sidebar-header .brand-title,
+  .sidebar-header .brand-subtitle {
+    display: none;
+  }
+
+  /* ── Panel inferior deslizable ── */
+  #sidebar-container {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 160px;               /* lo reemplaza mobile-sheet.js */
+    border-radius: 22px 22px 0 0;
+    border: none;
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.14);
+    transition: height 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: height;
+  }
+  #sidebar-container.sheet-dragging { transition: none; }
+
+  /* Manija: zona de toque grande, línea chica */
+  .mobile-handlebar {
+    position: relative;
+    width: 100%;
+    height: 22px;
+    margin: 0;
+    background: transparent;
+    border-radius: 0;
+    flex-shrink: 0;
+    cursor: grab;
+    touch-action: none;
+  }
+  .mobile-handlebar::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 40px;
+    height: 5px;
+    margin-left: -20px;
+    border-radius: var(--radius-full);
+    background: var(--slate-200);
+  }
+
+  .sidebar-header {
+    padding: 0 1rem 0.75rem;
+    background: transparent;
+  }
+  .sidebar-header .categories-wrapper { margin-top: 0.65rem; }
+
+  .sidebar-body {
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    overscroll-behavior: contain;
+  }
+
+  /* En modo bajo no hace falta mostrar el contenido de abajo */
+  #sidebar-container.sheet-peek .sidebar-body { visibility: hidden; }
+
+  /* ── Botonera derecha: siempre justo arriba del panel ── */
+  #right-panel {
+    top: auto;
+    bottom: calc(var(--sheet-h, 160px) + 12px);
+    right: 12px;
+    width: auto;
+    transition: bottom 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
+  }
+  .sheet-dragging ~ #right-panel { transition: none; }
+
+  /* Con el panel arriba no hay lugar: la botonera se esconde */
+  #sidebar-container.sheet-full ~ #right-panel .right-btn-stack {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .right-action-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  /* Paneles de Mis Mapas / Cerca tuyo / Crear: hoja grande sobre el mapa */
+  #right-expanded-panel {
+    position: fixed;
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: none;
+    z-index: 30;
+    transform: translateY(16px);
+  }
+  #right-expanded-panel.open { transform: translateY(0); }
+
+  /* ── Controles del mapa ── */
+  /* El zoom se hace con dos dedos: los botones + / − sobran */
+  .leaflet-control-zoom { display: none; }
+
+  /* Créditos del mapa: siempre visibles, arriba del panel */
+  .leaflet-bottom {
+    bottom: var(--sheet-h, 160px);
+    transition: bottom 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .leaflet-control-attribution {
+    font-size: 9px;
+    max-width: 70vw;
+  }
+}
