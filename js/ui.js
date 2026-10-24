@@ -262,7 +262,7 @@ const UI = {
                     <div class="card-img-wrap">
                         <span class="card-cat-badge">${place.category}</span>
                         <img src="${place.photo}" alt="${place.name}" class="card-img" loading="lazy"
-                             onerror="this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=800'">
+                             onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=800'">
                     </div>
                     <div class="card-info" style="background:${placeCatColor};">
                         <h3 class="card-title">${place.name}</h3>
@@ -301,7 +301,7 @@ const UI = {
             <div class="place-detail-view">
                 <div class="detail-banner">
                     <img src="${place.photo}" alt="${place.name}"
-                         onerror="this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=800'">
+                         onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=800'">
                 </div>
                 <div>
                     <h2 class="detail-name">${place.name}</h2>

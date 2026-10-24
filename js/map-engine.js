@@ -83,6 +83,7 @@ const MapEngine = {
     renderPlaces(places, onPlaceClickCallback) {
         this.clearMarkers();
         if (!places || places.length === 0) return;
+        this.renderedPlaces = places;   // para saber qué pines hay dibujados
 
         const bounds = L.latLngBounds();
 
@@ -199,6 +200,7 @@ const MapEngine = {
     clearMarkers() {
         if (this.clusterGroup) this.clusterGroup.clearLayers();
         this.markersMap.clear();
+        this.renderedPlaces = null;
     },
 
     getMarkerIconHtml(category) {

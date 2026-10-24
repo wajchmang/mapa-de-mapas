@@ -58,6 +58,8 @@ const MobileSheet = {
         if (!this.sheet || !this.header || !this.handle) return;
 
         this.prev = this.snapshot();
+        // Si se entró con un link directo a un lugar, arrancar a mitad de pantalla
+        if (AppStore.state.selectedPlaceId) this.state = 'half';
 
         this.bindStamp();
         this.bindDrag();

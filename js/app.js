@@ -17,25 +17,39 @@ const App = {
         // Init Right Panel
         RightPanel.init();
 
+        // Links directos (#map=...&place=...): leerlos ANTES del primer dibujo,
+        // porque el primer dibujo reescribe la dirección y borraría el link.
+        this.readHashIntoState();
+
         // Initial render
         this.onStateChange();
 
-        // Hash routing support
-        this.handleInitialHash();
+        // Si alguien cambia el link a mano con la página abierta
         window.addEventListener('hashchange', () => this.handleInitialHash());
     },
 
-    handleInitialHash() {
+    /** Copia el mapa y el lugar del link al estado, sin dibujar. Devuelve true si había un mapa. */
+    readHashIntoState() {
         const hash = window.location.hash;
-        if (!hash) return;
+        if (!hash) return false;
         const params = new URLSearchParams(hash.slice(1));
         const mapId = params.get('map');
         const placeId = params.get('place');
-        if (mapId) {
-            AppStore.state.activeMapId = mapId;
-            if (placeId) AppStore.state.selectedPlaceId = placeId;
-            this.onStateChange();
+        if (!mapId) return false;
+        AppStore.state.activeMapId = mapId;
+        AppStore.state.selectedPlaceId = placeId || null;
+        // Link a un mapa que no existe (o fue borrado): ignorarlo y mostrar el inicio
+        if (!AppStore.getActiveMap()) {
+            AppStore.state.activeMapId = null;
+            AppStore.state.selectedPlaceId = null;
+            return false;
         }
+        if (placeId && !AppStore.getSelectedPlace()) AppStore.state.selectedPlaceId = null;
+        return true;
+    },
+
+    handleInitialHash() {
+        if (this.readHashIntoState()) this.onStateChange();
     },
 
     onStateChange() {
@@ -56,6 +70,10 @@ const App = {
 
         // Render map markers
         if (activeMap && selectedPlace) {
+            // Si se entró directo a un lugar (link), primero dibujar los pines de su mapa
+            if (MapEngine.renderedPlaces !== activeMap.places) {
+                MapEngine.renderPlaces(activeMap.places, (place) => AppStore.setSelectedPlace(place.id));
+            }
             MapEngine.panToPlace(selectedPlace);
         } else if (activeMap && (activeMap.places || []).length > 0) {
             MapEngine.renderPlaces(activeMap.places, (place) => AppStore.setSelectedPlace(place.id));
