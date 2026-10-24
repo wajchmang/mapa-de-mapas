@@ -12,15 +12,16 @@ const MapEngine = {
 
         this.map = L.map(elementId, {
             zoomControl: false,
-            attributionControl: false
+            attributionControl: false,
+            minZoom: 3,
+            maxZoom: 19   // necesario para el agrupado de pines (MarkerCluster)
         }).setView(CONFIG.DEFAULT_CENTER, CONFIG.DEFAULT_ZOOM);
 
         L.control.zoom({ position: 'topright' }).addTo(this.map);
+        // Créditos del mapa (obligatorios para OpenStreetMap / OpenFreeMap)
+        this.attribution = L.control.attribution({ position: 'bottomright', prefix: false }).addTo(this.map);
 
-        L.tileLayer(CONFIG.MAP_TILE_PROVIDER, {
-            maxZoom: 19,
-            attribution: CONFIG.MAP_ATTRIBUTION
-        }).addTo(this.map);
+        this.addBaseLayer();
 
         this.clusterGroup = L.markerClusterGroup({
             showCoverageOnHover: false,
@@ -37,6 +38,46 @@ const MapEngine = {
         });
 
         this.map.addLayer(this.clusterGroup);
+    },
+
+    /**
+     * Mapa de fondo: OpenFreeMap (vectorial) vía MapLibre.
+     * Si el navegador no soporta WebGL, usa los tiles clásicos de OpenStreetMap.
+     */
+    addBaseLayer() {
+        const canUseVector = typeof L.maplibreGL === 'function'
+            && window.maplibregl
+            && this.hasWebGL();
+
+        if (canUseVector) {
+            let vectorLayer = null;
+            try {
+                vectorLayer = L.maplibreGL({ style: CONFIG.MAP_STYLE_URL }).addTo(this.map);
+                this.attribution.addAttribution(CONFIG.MAP_ATTRIBUTION);
+                return;
+            } catch (err) {
+                console.warn('No se pudo cargar el mapa vectorial, uso el plan B:', err);
+                if (vectorLayer) {
+                    try { this.map.removeLayer(vectorLayer); } catch (e) { /* nada */ }
+                }
+                this.map.getContainer().querySelectorAll('.leaflet-gl-layer').forEach(el => el.remove());
+            }
+        }
+
+        L.tileLayer(CONFIG.MAP_FALLBACK_TILES, {
+            maxZoom: 19,
+            attribution: CONFIG.MAP_FALLBACK_ATTRIBUTION
+        }).addTo(this.map);
+    },
+
+    /** ¿El navegador puede dibujar mapas vectoriales? */
+    hasWebGL() {
+        try {
+            const canvas = document.createElement('canvas');
+            return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+        } catch (e) {
+            return false;
+        }
     },
 
     renderPlaces(places, onPlaceClickCallback) {
