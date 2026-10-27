@@ -90,7 +90,7 @@ const MapEngine = {
         places.forEach(place => {
             if (!place.lat || !place.lng) return;
 
-            const iconHtml = this.getMarkerIconHtml(place.category);
+            const iconHtml = this.getMarkerIconHtml(place.mapCategory || place.category);
             const customIcon = L.divIcon({
                 html: iconHtml,
                 className: 'custom-marker-wrapper',
@@ -102,11 +102,12 @@ const MapEngine = {
             const marker = L.marker([place.lat, place.lng], { icon: customIcon });
 
             // Mini popup tooltip
+            const e = (typeof esc === 'function') ? esc : (x) => x;
             const popupHtml = `
                 <div class="marker-popup-content">
-                    <span class="popup-badge">${place.category}</span>
-                    <h4 class="popup-title">${place.name}</h4>
-                    <p class="popup-address">📍 ${place.address}</p>
+                    ${place.category ? `<span class="popup-badge">${e(place.category)}</span>` : ''}
+                    <h4 class="popup-title">${e(place.name)}</h4>
+                    ${place.address ? `<p class="popup-address">📍 ${e(place.address)}</p>` : ''}
                 </div>
             `;
             marker.bindPopup(popupHtml, {

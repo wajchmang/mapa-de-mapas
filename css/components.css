@@ -495,3 +495,102 @@
   padding: 2rem 1rem;
 }
 
+
+/* ================================================================
+   PORTADAS DE DISEÑO (sin foto): color de la categoría + ícono
+================================================================ */
+.card-img-wrap.no-img {
+  background: var(--cat, var(--primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+}
+.card-img-wrap.no-img::after {
+  content: attr(data-icon);
+  font-size: 2.1rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18));
+}
+/* En los lugares, la portada sin foto va más suave para no competir con la franja de color */
+.place-item .card-img-wrap.no-img {
+  background: color-mix(in srgb, var(--cat, var(--primary)) 18%, #fff);
+}
+.place-item .card-img-wrap.no-img::after { font-size: 1.8rem; }
+
+/* Tarjetas de listas de Google Maps */
+.list-card .card-curator strong { color: var(--primary); }
+
+/* Estado de carga */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: var(--slate-600);
+  font-size: 0.9rem;
+}
+.loading-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--slate-200);
+  border-top-color: var(--primary);
+  animation: mdm-spin 0.8s linear infinite;
+}
+@keyframes mdm-spin { to { transform: rotate(360deg); } }
+
+/* Cabecera del detalle de mapa */
+.map-detail-head { margin-bottom: 1.25rem; }
+.map-detail-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--navy-900);
+  line-height: 1.25;
+}
+.map-detail-credits {
+  font-size: 0.8rem;
+  color: var(--slate-600);
+  margin-top: 0.25rem;
+}
+.map-detail-desc {
+  font-size: 0.82rem;
+  color: var(--slate-600);
+  margin-top: 0.4rem;
+  white-space: pre-line;
+}
+.source-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+}
+.source-link:hover { text-decoration: underline; }
+.list-note {
+  font-size: 0.85rem;
+  color: var(--slate-600);
+  background: var(--slate-50);
+  border: 1px dashed var(--slate-200);
+  border-radius: var(--radius-md);
+  padding: 0.9rem;
+}
+
+/* Detalle de lugar */
+.detail-cat {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: var(--cat, var(--primary));
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.detail-desc { white-space: pre-line; }
+.detail-credit {
+  font-size: 0.75rem;
+  color: var(--slate-400);
+}

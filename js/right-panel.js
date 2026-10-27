@@ -164,8 +164,8 @@ const RightPanel = {
                     <div class="nearby-card" data-place-id="${place.id}" data-map-id="${map.id}">
                         <div style="flex-shrink:0"><span class="nearby-distance-badge">${distLabel}</span></div>
                         <div class="nearby-info">
-                            <h4>${place.name}</h4>
-                            <p>${map.title} · ${place.category}</p>
+                            <h4>${esc(place.name)}</h4>
+                            <p>${esc(map.title)}${place.category ? ' · ' + esc(place.category) : ''}</p>
                         </div>
                     </div>`;
             });
@@ -315,10 +315,10 @@ const RightPanel = {
             return maps.map(m => `
                 <div class="mini-map-card" data-map-id="${m.id}">
                     <img src="${m.coverImage || 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=200'}" 
-                         alt="${m.title}" class="mini-map-img" loading="lazy">
+                         alt="" class="mini-map-img" loading="lazy">
                     <div class="mini-map-info">
-                        <h4>${m.title}</h4>
-                        <p>${m.status === 'draft' ? 'Borrador' : (m.places || []).length + ' lugares'} • ${m.category}</p>
+                        <h4>${esc(m.title)}</h4>
+                        <p>${m.status === 'draft' ? 'Borrador' : (m.places || []).length + ' lugares'} • ${esc(m.category)}</p>
                     </div>
                 </div>
             `).join('');
@@ -615,7 +615,7 @@ const RightPanel = {
         container.style.display = 'block';
         list.innerHTML = this.pendingPlaces.map(p => `
             <div class="added-place-item">
-                <span class="added-place-name">📍 ${p.name}</span>
+                <span class="added-place-name">📍 ${esc(p.name)}</span>
                 <button class="remove-place-btn" data-id="${p.id}">✕</button>
             </div>
         `).join('');
