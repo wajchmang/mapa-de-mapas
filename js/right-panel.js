@@ -15,6 +15,18 @@ const RightPanel = {
         this.btnGeo = document.getElementById('btn-geo');
         this.btnMyMaps = document.getElementById('btn-my-maps');
         this.btnCreate = document.getElementById('btn-create-map');
+        this.btnAccount = document.getElementById('btn-account');
+
+        if (this.btnAccount) {
+            this.btnAccount.addEventListener('click', () => this.toggleMode('account'));
+            if (typeof Auth !== 'undefined') {
+                Auth.subscribe(() => {
+                    this.updateAccountButton();
+                    if (this.mode === 'account') this.renderAccount();
+                });
+            }
+            this.updateAccountButton();
+        }
 
         this.btnGeo.addEventListener('click', () => this.toggleMode('geo'));
         this.btnMyMaps.addEventListener('click', () => this.toggleMode('myMaps'));
@@ -29,10 +41,9 @@ const RightPanel = {
         this.mode = newMode;
 
         // Update button active states
-        [this.btnGeo, this.btnMyMaps, this.btnCreate].forEach(b => b.classList.remove('active'));
-        if (newMode === 'geo') this.btnGeo.classList.add('active');
-        if (newMode === 'myMaps') this.btnMyMaps.classList.add('active');
-        if (newMode === 'createMap') this.btnCreate.classList.add('active');
+        this.allButtons().forEach(b => b.classList.remove('active'));
+        const activeBtn = { account: this.btnAccount, geo: this.btnGeo, myMaps: this.btnMyMaps, createMap: this.btnCreate }[newMode];
+        if (activeBtn) activeBtn.classList.add('active');
 
         this.renderMode();
         this.container.classList.add('open');
@@ -41,11 +52,16 @@ const RightPanel = {
     close() {
         this.mode = null;
         this.container.classList.remove('open');
-        [this.btnGeo, this.btnMyMaps, this.btnCreate].forEach(b => b.classList.remove('active'));
+        this.allButtons().forEach(b => b.classList.remove('active'));
+    },
+
+    allButtons() {
+        return [this.btnAccount, this.btnGeo, this.btnMyMaps, this.btnCreate].filter(Boolean);
     },
 
     renderMode() {
         switch (this.mode) {
+            case 'account': this.renderAccount(); break;
             case 'geo': this.renderGeo(); break;
             case 'myMaps': this.renderMyMaps(); break;
             case 'createMap': this.renderCreateMap(); break;
@@ -209,6 +225,85 @@ const RightPanel = {
     // ────────────────────────────────────────────────────────────────────
     // MY MAPS MODE
     // ────────────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────
+    // CUENTA (login con Google)
+    // ────────────────────────────────────────────────────────────────────
+    updateAccountButton() {
+        if (!this.btnAccount || typeof Auth === 'undefined') return;
+        const icon = this.btnAccount.querySelector('.btn-icon');
+        const label = this.btnAccount.querySelector('.btn-label');
+        if (Auth.isLoggedIn()) {
+            const avatar = Auth.profile && Auth.profile.avatar_url;
+            icon.innerHTML = avatar
+                ? `<img class="account-avatar" src="${escapeHtml(avatar)}" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null;this.replaceWith(document.createTextNode('👤'))">`
+                : '👤';
+            label.textContent = Auth.firstName().slice(0, 9);
+            this.btnAccount.setAttribute('aria-label', 'Tu cuenta: ' + Auth.firstName());
+        } else {
+            icon.textContent = '👤';
+            label.textContent = 'Entrar';
+            this.btnAccount.setAttribute('aria-label', 'Entrar con Google');
+        }
+    },
+
+    renderAccount() {
+        const loggedIn = typeof Auth !== 'undefined' && Auth.isLoggedIn();
+        const available = typeof Auth !== 'undefined' && !!Auth.client;
+        let body;
+
+        if (!available) {
+            body = `<p class="account-text">El login no está disponible en este momento. Podés seguir explorando todos los mapas.</p>`;
+        } else if (!loggedIn) {
+            body = `
+                <p class="account-lead">Explorar es libre, sin registrarte.</p>
+                <p class="account-text">Entrá con tu cuenta de Google para guardar mapas y, muy pronto, sumar los tuyos a la comunidad.</p>
+                <button type="button" class="google-btn" id="btn-google-login">
+                    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+                    <span>Continuar con Google</span>
+                </button>
+                <p class="account-note">Solo usamos tu nombre, tu mail y tu foto de Google.</p>
+            `;
+        } else {
+            const p = Auth.profile || {};
+            const avatar = p.avatar_url
+                ? `<img class="account-big-avatar" src="${escapeHtml(p.avatar_url)}" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none'">`
+                : `<div class="account-big-avatar account-big-avatar--empty">👤</div>`;
+            body = `
+                <div class="account-card">
+                    ${avatar}
+                    <div>
+                        <div class="account-name">${escapeHtml(p.display_name || Auth.firstName())}</div>
+                        <div class="account-email">${escapeHtml(Auth.user.email || '')}</div>
+                        ${Auth.isAdmin() ? '<span class="account-badge">Administrador</span>' : ''}
+                    </div>
+                </div>
+                <p class="account-text">Ya estás dentro. Pronto vas a poder guardar mapas en tu cuenta y sumar los tuyos.</p>
+                <button type="button" class="account-logout" id="btn-logout">Cerrar sesión</button>
+            `;
+        }
+
+        this.container.innerHTML = `
+            <div class="expanded-panel-header">
+                <span class="expanded-panel-title">👤 Tu cuenta</span>
+                <button class="panel-close-btn" id="rp-close">✕</button>
+            </div>
+            <div class="expanded-panel-body account-body">${body}</div>
+        `;
+
+        document.getElementById('rp-close').addEventListener('click', () => this.close());
+        const loginBtn = document.getElementById('btn-google-login');
+        if (loginBtn) loginBtn.addEventListener('click', () => {
+            loginBtn.disabled = true;
+            loginBtn.querySelector('span').textContent = 'Abriendo Google…';
+            Auth.signIn();
+        });
+        const logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+            logoutBtn.disabled = true;
+            await Auth.signOut();
+        });
+    },
+
     renderMyMaps() {
         const created = Identity.getCreatedMaps();
         const saved = Identity.getSavedMaps();

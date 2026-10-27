@@ -184,6 +184,10 @@
 
             <!-- Reordered: Mis Mapas → Cerca tuyo → Crear Mapa -->
             <div class="right-btn-stack">
+                <button id="btn-account" class="right-action-btn account-btn" aria-label="Tu cuenta" title="Tu cuenta">
+                    <span class="btn-icon">👤</span>
+                    <span class="btn-label">Entrar</span>
+                </button>
                 <button id="btn-my-maps" class="right-action-btn" aria-label="Mis Mapas" title="Mis Mapas">
                     <span class="btn-icon">🗺️</span>
                     <span class="btn-label">Mis Mapas</span>
@@ -208,9 +212,13 @@
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
     <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.js"></script>
 
+    <!-- Supabase (login con Google + base de datos) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+
     <!-- Application Scripts — order matters -->
     <script src="data/maps-data.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/geojson-parser.js"></script>
     <script src="js/identity.js"></script>
     <script src="js/map-engine.js"></script>

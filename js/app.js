@@ -60,9 +60,9 @@ const App = {
         if (activeMap) {
             const params = new URLSearchParams({ map: activeMap.id });
             if (selectedPlace) params.set('place', selectedPlace.id);
-            window.history.replaceState(null, '', `#${params.toString()}`);
+            window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${params.toString()}`);
         } else {
-            window.history.replaceState(null, '', window.location.pathname);
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
 
         // Render sidebar

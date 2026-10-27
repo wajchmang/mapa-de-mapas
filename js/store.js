@@ -105,9 +105,9 @@ const AppStore = {
 
         const newHash = params.toString();
         if (newHash) {
-            history.replaceState(null, '', `#${newHash}`);
+            history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${newHash}`);
         } else {
-            history.replaceState(null, '', window.location.pathname);
+            history.replaceState(null, '', window.location.pathname + window.location.search);
         }
     },
 

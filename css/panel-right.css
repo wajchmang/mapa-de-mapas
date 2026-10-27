@@ -556,3 +556,141 @@
     max-height: 50vh;
   }
 }
+
+/* ================================================================
+   CUENTA — botón y panel de login con Google
+================================================================ */
+.account-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.account-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.account-lead {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.account-text {
+  font-size: 0.9rem;
+  color: var(--slate-600);
+  line-height: 1.5;
+}
+
+.account-note {
+  font-size: 0.75rem;
+  color: var(--slate-400);
+  text-align: center;
+}
+
+/* Botón según las pautas de marca de Google: fondo blanco, borde gris, logo a color */
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 46px;
+  padding: 0.7rem 1rem;
+  background: #fff;
+  color: #1f1f1f;
+  border: 1px solid #747775;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.google-btn:hover { background: #f8f9fa; box-shadow: var(--shadow-sm); }
+.google-btn:disabled { opacity: 0.7; cursor: wait; }
+
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+}
+
+.account-big-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.account-big-avatar--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--slate-200);
+  font-size: 1.6rem;
+}
+
+.account-name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--navy-900);
+}
+
+.account-email {
+  font-size: 0.8rem;
+  color: var(--slate-600);
+  word-break: break-all;
+}
+
+.account-badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.account-logout {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-full);
+  padding: 0.55rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--slate-600);
+  cursor: pointer;
+}
+.account-logout:hover { border-color: var(--slate-400); color: var(--navy-900); }
+
+/* Aviso flotante breve */
+.mdm-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: calc(100vw - 32px);
+  padding: 0.7rem 1rem;
+  background: var(--navy-900);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-lg);
+}
