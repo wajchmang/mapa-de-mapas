@@ -23,6 +23,7 @@ const RightPanel = {
                 Auth.subscribe(() => {
                     this.updateAccountButton();
                     if (this.mode === 'account') this.renderAccount();
+                    if (this.mode === 'indexMap' && !this.indexData) this.renderIndexMap();
                 });
             }
             this.updateAccountButton();
@@ -30,7 +31,7 @@ const RightPanel = {
 
         this.btnGeo.addEventListener('click', () => this.toggleMode('geo'));
         this.btnMyMaps.addEventListener('click', () => this.toggleMode('myMaps'));
-        this.btnCreate.addEventListener('click', () => this.toggleMode('createMap'));
+        this.btnCreate.addEventListener('click', () => this.toggleMode('indexMap'));
     },
 
     toggleMode(newMode) {
@@ -42,7 +43,7 @@ const RightPanel = {
 
         // Update button active states
         this.allButtons().forEach(b => b.classList.remove('active'));
-        const activeBtn = { account: this.btnAccount, geo: this.btnGeo, myMaps: this.btnMyMaps, createMap: this.btnCreate }[newMode];
+        const activeBtn = { account: this.btnAccount, geo: this.btnGeo, myMaps: this.btnMyMaps, createMap: this.btnCreate, indexMap: this.btnCreate }[newMode];
         if (activeBtn) activeBtn.classList.add('active');
 
         this.renderMode();
@@ -65,6 +66,7 @@ const RightPanel = {
             case 'geo': this.renderGeo(); break;
             case 'myMaps': this.renderMyMaps(); break;
             case 'createMap': this.renderCreateMap(); break;
+            case 'indexMap': this.renderIndexMap(); break;
         }
     },
 
@@ -225,6 +227,333 @@ const RightPanel = {
     // ────────────────────────────────────────────────────────────────────
     // MY MAPS MODE
     // ────────────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────
+    // SUMAR MAPA (indexar un mapa de Google My Maps o una lista de Google Maps)
+    // ────────────────────────────────────────────────────────────────────
+    CATEGORIES: ['Gastronomía', 'Cafeterías', 'Bares', 'Turismo', 'Barrios y Compras', 'Cultura'],
+
+    indexShell(bodyHtml) {
+        this.container.innerHTML = `
+            <div class="expanded-panel-header">
+                <span class="expanded-panel-title">＋ Sumar un mapa</span>
+                <button class="panel-close-btn" id="rp-close">✕</button>
+            </div>
+            <div class="expanded-panel-body index-body">${bodyHtml}</div>`;
+        document.getElementById('rp-close').addEventListener('click', () => this.close());
+    },
+
+    renderIndexMap() {
+        this.indexData = null;
+        const loggedIn = typeof Auth !== 'undefined' && Auth.isLoggedIn();
+
+        if (!loggedIn) {
+            this.indexShell(`
+                <p class="account-lead">Sumá tus mapas a la comunidad</p>
+                <p class="account-text">Para sumar un mapa necesitás entrar con tu cuenta de Google. Así cada mapa queda con el nombre de quien lo sumó.</p>
+                <button type="button" class="google-btn" id="btn-index-login">
+                    <span>Entrar con Google</span>
+                </button>
+            `);
+            document.getElementById('btn-index-login').addEventListener('click', () => Auth.signIn());
+            return;
+        }
+
+        this.indexShell(`
+            <form id="index-form" class="create-form" novalidate>
+                <div class="form-group">
+                    <label class="form-label" for="ix-url">Link del mapa</label>
+                    <input id="ix-url" class="form-input" type="url" inputmode="url" autocomplete="off"
+                           placeholder="Pegá acá el link de Google" required>
+                </div>
+                <button type="submit" class="submit-create-btn" id="ix-search">Buscar mapa</button>
+                <div id="ix-msg" class="index-msg" role="status"></div>
+            </form>
+            <div class="index-help">
+                <p><strong>¿Qué links sirven?</strong></p>
+                <p>🗺️ <strong>Mapas de Google My Maps</strong>: se traen todos sus lugares y se ven acá en el mapa.</p>
+                <p>📋 <strong>Listas de Google Maps</strong> (links <em>maps.app.goo.gl</em>): se suman como tarjeta que abre la lista en Google Maps.</p>
+                <p class="index-help-small">Tienen que ser públicos ("Cualquier persona con el vínculo").</p>
+            </div>
+        `);
+
+        const form = document.getElementById('index-form');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.indexFetchPreview(document.getElementById('ix-url').value.trim());
+        });
+        setTimeout(() => document.getElementById('ix-url')?.focus(), 50);
+    },
+
+    indexMessage(text, kind = 'info') {
+        const el = document.getElementById('ix-msg');
+        if (!el) return;
+        el.className = 'index-msg ' + kind;
+        el.textContent = text || '';
+    },
+
+    async indexFetchPreview(url) {
+        if (!url) return this.indexMessage('Pegá un link para empezar.', 'error');
+        const btn = document.getElementById('ix-search');
+        btn.disabled = true;
+        btn.textContent = 'Buscando…';
+        this.indexMessage('Leyendo el mapa en Google… puede tardar unos segundos.');
+
+        let data = null;
+        try {
+            const { data: ok, error } = await Auth.client.functions.invoke('indexar-mapa', { body: { url } });
+            if (error) {
+                // Las respuestas 4xx traen un JSON con el motivo
+                try { data = await error.context.json(); } catch (e) { data = { ok: false, message: 'No pudimos leer ese link. Probá de nuevo.' }; }
+            } else {
+                data = ok;
+            }
+        } catch (e) {
+            data = { ok: false, message: 'No pudimos conectarnos. Probá de nuevo en un rato.' };
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Buscar mapa';
+
+        if (data && data.ok) return this.renderIndexPreview(data);
+        if (data && data.error === 'lista' && data.list_id) return this.renderIndexListForm(data, url);
+        this.indexMessage((data && data.message) || 'No pudimos leer ese link.', 'error');
+    },
+
+    async findExisting(sourceMid) {
+        if (!sourceMid) return null;
+        try {
+            const { data } = await Auth.client.from('maps').select('slug, title').eq('source_mid', sourceMid).maybeSingle();
+            return data || null;
+        } catch (e) { return null; }
+    },
+
+    categoryOptions(selected) {
+        return this.CATEGORIES.map(c => `<option ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join('');
+    },
+
+    existingHtml(existing) {
+        return `
+            <div class="index-existing">
+                <p><strong>Este mapa ya está en Mapa de Mapas</strong> como “${esc(existing.title)}”.</p>
+                <button type="button" class="submit-create-btn" id="ix-open-existing">Ver el mapa</button>
+                <button type="button" class="index-back" id="ix-back">Probar con otro link</button>
+            </div>`;
+    },
+
+    bindExisting(existing) {
+        document.getElementById('ix-open-existing')?.addEventListener('click', () => {
+            this.close();
+            AppStore.setActiveMap(existing.slug);
+        });
+        document.getElementById('ix-back')?.addEventListener('click', () => this.renderIndexMap());
+    },
+
+    async renderIndexPreview(data) {
+        this.indexData = data;
+        const existing = await this.findExisting(data.mid);
+        if (existing) {
+            this.indexShell(this.existingHtml(existing));
+            return this.bindExisting(existing);
+        }
+
+        const sample = (data.places || []).slice(0, 5).map(p => `<li>${esc(p.name)}</li>`).join('');
+        const more = data.places.length > 5 ? `<li class="index-more">y ${data.places.length - 5} más…</li>` : '';
+        const withPhoto = data.places.filter(p => p.photo).length;
+
+        this.indexShell(`
+            <div class="index-found">
+                <span class="index-found-badge">✅ Encontramos ${data.places.length} lugares</span>
+                ${withPhoto ? `<span class="index-found-note">${withPhoto} con foto</span>` : ''}
+                <ul class="index-sample">${sample}${more}</ul>
+            </div>
+            <form id="index-save-form" class="create-form" novalidate>
+                <div class="form-group">
+                    <label class="form-label" for="ix-title">Nombre del mapa *</label>
+                    <input id="ix-title" class="form-input" type="text" maxlength="140" value="${esc(data.title || '')}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ix-author">Creado por *</label>
+                    <input id="ix-author" class="form-input" type="text" maxlength="80" value="${esc(data.author || '')}"
+                           placeholder="Nombre o @usuario de quien hizo el mapa" required>
+                    ${data.author ? '<span class="form-hint">Lo sacamos de Google. Podés sumar su @ de Instagram.</span>' : '<span class="form-hint">Google no muestra el autor: escribilo vos (nombre o @usuario).</span>'}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ix-desc">Descripción</label>
+                    <textarea id="ix-desc" class="form-textarea" maxlength="2000">${esc(data.description || '')}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ix-category">Categoría</label>
+                    <select id="ix-category" class="form-select">${this.categoryOptions('Gastronomía')}</select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ix-tags">Palabras clave (separadas por coma)</label>
+                    <input id="ix-tags" class="form-input" type="text" placeholder="Ej: terraza, brunch, palermo">
+                </div>
+                <button type="submit" class="submit-create-btn" id="ix-save">Publicar mapa</button>
+                <button type="button" class="index-back" id="ix-back">Cancelar</button>
+                <div id="ix-msg" class="index-msg" role="status"></div>
+            </form>
+        `);
+
+        document.getElementById('ix-back').addEventListener('click', () => this.renderIndexMap());
+        document.getElementById('index-save-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveIndexed('map');
+        });
+    },
+
+    async renderIndexListForm(data, originalUrl) {
+        this.indexData = Object.assign({}, data, { originalUrl });
+        const existing = await this.findExisting(data.list_id);
+        if (existing) {
+            this.indexShell(this.existingHtml(existing));
+            return this.bindExisting(existing);
+        }
+
+        this.indexShell(`
+            <div class="index-found index-found--list">
+                <span class="index-found-badge">📋 Es una lista de Google Maps</span>
+                <p class="index-found-text">Google no deja traer sus lugares, así que se va a sumar como una tarjeta que abre la lista en Google Maps. Contanos de qué se trata para que la gente la encuentre.</p>
+            </div>
+            <form id="index-save-form" class="create-form" novalidate>
+                <div class="form-group">
+                    <label class="form-label" for="ix-title">Nombre de la lista *</label>
+                    <input id="ix-title" class="form-input" type="text" maxlength="140" placeholder="Ej: Pizzerías de Almagro" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ix-author">Creada por *</label>
+                    <input id="ix-author" class="form-input" type="text" maxlength="80" placeholder="Nombre o @usuario de quien hizo la lista" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ix-desc">Descripción</label>
+                    <textarea id="ix-desc" class="form-textarea" maxlength="2000" placeholder="¿Qué lugares tiene?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ix-category">Categoría</label>
+                    <select id="ix-category" class="form-select">${this.categoryOptions('Gastronomía')}</select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ix-tags">Palabras clave (separadas por coma)</label>
+                    <input id="ix-tags" class="form-input" type="text" placeholder="Ej: pizza, almagro, barato">
+                </div>
+                <a class="source-link" href="${esc(data.source_url)}" target="_blank" rel="noopener">Abrir la lista para revisarla ↗</a>
+                <button type="submit" class="submit-create-btn" id="ix-save">Publicar lista</button>
+                <button type="button" class="index-back" id="ix-back">Cancelar</button>
+                <div id="ix-msg" class="index-msg" role="status"></div>
+            </form>
+        `);
+
+        document.getElementById('ix-back').addEventListener('click', () => this.renderIndexMap());
+        document.getElementById('index-save-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveIndexed('list');
+        });
+    },
+
+    slugify(s) {
+        return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'mapa';
+    },
+
+    parseTags(s) {
+        return [...new Set((s || '').split(',')
+            .map(t => t.trim().replace(/^#/, '').toLowerCase())
+            .filter(t => t && t.length <= 30))].slice(0, 8);
+    },
+
+    async saveIndexed(kind) {
+        const data = this.indexData;
+        if (!data || !Auth.isLoggedIn()) return;
+
+        const title = document.getElementById('ix-title').value.trim();
+        const author = document.getElementById('ix-author').value.trim();
+        const description = document.getElementById('ix-desc').value.trim();
+        const category = document.getElementById('ix-category').value;
+        const tags = this.parseTags(document.getElementById('ix-tags').value);
+
+        if (!title) { document.getElementById('ix-title').focus(); return this.indexMessage('Falta el nombre.', 'error'); }
+        if (!author) { document.getElementById('ix-author').focus(); return this.indexMessage('Contanos quién lo creó.', 'error'); }
+
+        const btn = document.getElementById('ix-save');
+        btn.disabled = true;
+        btn.textContent = 'Publicando…';
+        this.indexMessage('');
+
+        const isList = kind === 'list';
+        const row = {
+            title,
+            description: description || null,
+            category,
+            tags,
+            source: isList ? 'google_list' : 'google_mymaps',
+            source_url: data.source_url,
+            source_mid: isList ? data.list_id : data.mid,
+            author_name: author,
+            added_by: Auth.user.id,
+            status: 'published',
+            last_synced_at: isList ? null : new Date().toISOString()
+        };
+
+        // Insertar el mapa con un slug libre (si está tomado, se le agrega un sufijo)
+        const base = this.slugify(title);
+        let map = null, lastError = null;
+        for (let i = 0; i < 4 && !map; i++) {
+            const slug = i === 0 ? base : `${base}-${Math.random().toString(36).slice(2, 6)}`;
+            const { data: inserted, error } = await Auth.client.from('maps')
+                .insert(Object.assign({ slug }, row)).select('id, slug').single();
+            if (!error) { map = inserted; break; }
+            lastError = error;
+            if (error.code === '23505' && /source_mid/.test(error.message || '')) {
+                const existing = await this.findExisting(row.source_mid);
+                if (existing) { this.indexShell(this.existingHtml(existing)); return this.bindExisting(existing); }
+            }
+            if (error.code !== '23505') break;
+        }
+        if (!map) {
+            console.warn(lastError);
+            btn.disabled = false;
+            btn.textContent = isList ? 'Publicar lista' : 'Publicar mapa';
+            return this.indexMessage('No se pudo publicar. Probá de nuevo en un rato.', 'error');
+        }
+
+        // Cargar los lugares (solo mapas de My Maps)
+        if (!isList) {
+            const places = data.places.map((p, i) => ({
+                map_id: map.id,
+                key: `${map.slug}-${i}`,
+                name: (p.name || 'Sin nombre').slice(0, 300),
+                category: p.layer || null,
+                address: p.address || null,
+                lat: p.lat,
+                lng: p.lng,
+                description: p.description || null,
+                photo: p.photo || null,
+                position: i
+            }));
+            for (let i = 0; i < places.length; i += 500) {
+                const { error } = await Auth.client.from('places').insert(places.slice(i, i + 500));
+                if (error) {
+                    console.warn(error);
+                    await Auth.client.from('maps').delete().eq('id', map.id); // no dejar mapas a medias
+                    btn.disabled = false;
+                    btn.textContent = 'Publicar mapa';
+                    return this.indexMessage('No se pudieron guardar los lugares. Probá de nuevo.', 'error');
+                }
+            }
+        }
+
+        // Listo: recargar los mapas y abrir el nuevo
+        this.close();
+        if (typeof alertSafe === 'function') alertSafe(isList ? '¡Listo! Tu lista ya está publicada.' : '¡Listo! Tu mapa ya está publicado.');
+        if (typeof DataSource !== 'undefined') await DataSource.load();
+        if (isList) {
+            AppStore.setActiveMap(null);
+            AppStore.setSearchQuery('');
+        } else {
+            AppStore.setActiveMap(map.slug);
+        }
+    },
+
     // ────────────────────────────────────────────────────────────────────
     // CUENTA (login con Google)
     // ────────────────────────────────────────────────────────────────────

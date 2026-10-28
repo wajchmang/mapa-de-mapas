@@ -27,8 +27,18 @@ function json(req: Request, body: unknown, status = 200) {
 
 const MID_RE = /[?&#]mid=([A-Za-z0-9_-]{16,})/;
 const LIST_RE = /!11m\d+!2s|\/placelists\//;
+const LIST_ID_RE = /!11m\d+!2s([A-Za-z0-9_-]{10,})/;
 
-async function resolveMid(input: string): Promise<{ mid?: string; error?: string }> {
+type Resolved = { mid?: string; error?: string; listId?: string; listUrl?: string };
+
+// Lista de Google Maps: se devuelve su id y un link canónico (no se leen sus lugares)
+function asList(url: string): Resolved {
+  const m = url.match(LIST_ID_RE);
+  if (!m) return { error: "lista" };
+  return { error: "lista", listId: m[1], listUrl: `https://www.google.com/maps/@/data=!4m3!11m2!2s${m[1]}!3e3` };
+}
+
+async function resolveMid(input: string): Promise<Resolved> {
   input = (input || "").trim();
   const direct = input.match(MID_RE);
   if (direct) return { mid: direct[1] };
@@ -36,7 +46,7 @@ async function resolveMid(input: string): Promise<{ mid?: string; error?: string
   let url: URL;
   try { url = new URL(/^https?:\/\//.test(input) ? input : "https://" + input); } catch { return { error: "link_invalido" }; }
   if (!/(^|\.)(goo\.gl|google\.[a-z.]+)$/.test(url.hostname)) return { error: "no_es_google" };
-  if (LIST_RE.test(url.href)) return { error: "lista" };
+  if (LIST_RE.test(url.href)) return asList(url.href);
   let current = url.toString();
   for (let i = 0; i < 6; i++) {
     const res = await fetch(current, { redirect: "manual", headers: { "User-Agent": "curl/8.5.0" } });
@@ -46,7 +56,7 @@ async function resolveMid(input: string): Promise<{ mid?: string; error?: string
     current = new URL(loc, current).toString();
     const m = current.match(MID_RE);
     if (m) return { mid: m[1] };
-    if (LIST_RE.test(current)) return { error: "lista" };
+    if (LIST_RE.test(current)) return asList(current);
   }
   return { error: "sin_mapa" };
 }
@@ -165,7 +175,13 @@ Deno.serve(async (req: Request) => {
       link_invalido: "No parece un link válido.",
       sin_mapa: "No encontramos un mapa de My Maps en ese link.",
     };
-    return json(req, { ok: false, error: resolved.error, message: messages[resolved.error!] || "No se pudo leer el link." }, 422);
+    return json(req, {
+      ok: false,
+      error: resolved.error,
+      message: messages[resolved.error!] || "No se pudo leer el link.",
+      list_id: resolved.listId || null,
+      source_url: resolved.listUrl || null,
+    }, 422);
   }
 
   const mid = resolved.mid;
